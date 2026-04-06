@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Coins, Shield, Users } from 'lucide-react';
 import PlayerAuctionCard from '../../components/PlayerAuctionCard';
 import StatBadge from '../../components/StatBadge';
@@ -10,15 +10,19 @@ import { formatCurrency } from '../../utils/formatters';
 export default function TeamDashboard() {
   const teamId = useStore((state) => state.teamId);
   const profile = useStore((state) => state.profile);
+  const teams = useStore((state) => state.teams);
+  const loadLookups = useStore((state) => state.loadLookups);
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchTeamDashboard = async () => {
-      if (!teamId) return;
+    if (!teamId) {
+      return undefined;
+    }
 
+    const fetchTeamDashboard = async () => {
       try {
         setLoading(true);
         setError('');
@@ -40,12 +44,35 @@ export default function TeamDashboard() {
       }
     };
 
-    void fetchTeamDashboard();
-  }, [teamId]);
+    const refreshDashboard = async () => {
+      await Promise.all([fetchTeamDashboard(), loadLookups()]);
+    };
+
+    void refreshDashboard();
+
+    const channel = supabase
+      .channel(`team-dashboard-${teamId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
+        void refreshDashboard();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
+        void fetchTeamDashboard();
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [teamId, loadLookups]);
 
   const totalSpent = useMemo(
     () => players.reduce((sum, player) => sum + Number(player.sold_price ?? 0), 0),
     [players],
+  );
+
+  const rankedTeams = useMemo(
+    () => [...teams].sort((left, right) => Number(right.auction_credits ?? 0) - Number(left.auction_credits ?? 0) || left.name.localeCompare(right.name)),
+    [teams],
   );
 
   if (loading) {
@@ -102,6 +129,60 @@ export default function TeamDashboard() {
               <p className="font-semibold text-copy">{players.length} players acquired</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="card p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="section-heading">All Teams Credits</h2>
+            <p className="section-copy">Every team panel can now track the latest remaining auction balance across all series teams.</p>
+          </div>
+          <div className="rounded-full border border-divider bg-[#141414] px-4 py-2 text-sm text-copy">
+            {rankedTeams.length} teams
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-3">
+          {rankedTeams.length ? (
+            rankedTeams.map((entry, index) => {
+              const isCurrentTeam = entry.id === teamId;
+
+              return (
+                <div
+                  key={entry.id}
+                  className={`flex flex-col gap-3 rounded-2xl border px-4 py-4 transition md:flex-row md:items-center md:justify-between ${
+                    isCurrentTeam ? 'border-brand-teal/40 bg-brand-teal/10' : 'border-divider bg-[#141414]'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${isCurrentTeam ? 'bg-brand-teal text-black' : 'border border-divider bg-[#101010] text-copy'}`}>
+                      #{index + 1}
+                    </div>
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl border border-divider bg-[#101010]">
+                      {entry.logo_url ? (
+                        <img src={entry.logo_url} alt={`${entry.name} logo`} className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-[10px] uppercase tracking-[0.24em] text-muted">No logo</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-copy">{entry.name}</p>
+                        {isCurrentTeam ? <span className="rounded-full bg-brand-teal px-2.5 py-1 text-xs font-semibold text-black">Your team</span> : null}
+                      </div>
+                      <p className="text-sm text-muted">Remaining auction credits</p>
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-divider bg-[#101010] px-4 py-2 text-sm font-semibold text-copy">
+                    {formatCurrency(entry.auction_credits ?? 0)}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="rounded-2xl border border-divider bg-[#141414] px-4 py-5 text-sm text-muted">No teams available yet.</div>
+          )}
         </div>
       </section>
 

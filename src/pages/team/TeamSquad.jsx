@@ -1,5 +1,6 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import PlayerAuctionCard from '../../components/PlayerAuctionCard';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../supabaseClient';
 import { PLAYER_SELECT } from '../../utils/selects';
@@ -10,31 +11,46 @@ export default function TeamSquad() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchSquad = async () => {
-      if (!teamId) return;
+  const fetchSquad = async (background = false) => {
+    if (!teamId) {
+      return;
+    }
 
-      try {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
-        const { data, error: squadError } = await supabase
-          .from('players')
-          .select(PLAYER_SELECT)
-          .eq('sold_to_team_id', teamId)
-          .order('position')
-          .order('name');
+      }
+      setError('');
+      const { data, error: squadError } = await supabase
+        .from('players')
+        .select(PLAYER_SELECT)
+        .eq('sold_to_team_id', teamId)
+        .order('position')
+        .order('name');
 
-        if (squadError) throw squadError;
-        setPlayers(data ?? []);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load your squad.');
-      } finally {
+      if (squadError) throw squadError;
+      setPlayers(data ?? []);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load your squad.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     void fetchSquad();
   }, [teamId]);
+
+  useRealtimeRefresh(
+    `team-squad-${teamId}`,
+    [{ table: 'players' }, { table: 'teams' }],
+    () => {
+      void fetchSquad(true);
+    },
+    Boolean(teamId),
+  );
 
   return (
     <div className="space-y-6">

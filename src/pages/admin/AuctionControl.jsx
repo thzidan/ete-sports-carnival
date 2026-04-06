@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Coins, RadioTower } from 'lucide-react';
 import PlayerAuctionCard from '../../components/PlayerAuctionCard';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { supabase } from '../../supabaseClient';
 import { formatCurrency } from '../../utils/formatters';
 import { PLAYER_SELECT } from '../../utils/selects';
@@ -34,9 +35,11 @@ export default function AuctionControl() {
     return inserted;
   };
 
-  const fetchAuctionData = async () => {
+  const fetchAuctionData = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       setError('');
 
       const state = await ensureAuctionState();
@@ -68,13 +71,23 @@ export default function AuctionControl() {
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load auction control data.');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void fetchAuctionData();
   }, []);
+
+  useRealtimeRefresh(
+    'auction-control-live',
+    [{ table: 'auction_state' }, { table: 'players' }, { table: 'teams' }],
+    () => {
+      void fetchAuctionData(true);
+    },
+  );
 
   const handleToggleLive = async (isLive) => {
     try {
@@ -85,7 +98,7 @@ export default function AuctionControl() {
         .update({ is_live: isLive, updated_at: new Date().toISOString() })
         .eq('id', auctionState.id);
       if (updateError) throw updateError;
-      await fetchAuctionData();
+      await fetchAuctionData(true);
     } catch (toggleError) {
       setError(toggleError.message ?? 'Unable to update auction status.');
     } finally {
@@ -104,7 +117,7 @@ export default function AuctionControl() {
       if (updateError) throw updateError;
       clearSelectedTeamId();
       clearSoldPrice();
-      await fetchAuctionData();
+      await fetchAuctionData(true);
     } catch (assignError) {
       setError(assignError.message ?? 'Unable to set the current player.');
     } finally {
@@ -164,7 +177,7 @@ export default function AuctionControl() {
       setModalOpen(false);
       clearSelectedTeamId();
       clearSoldPrice();
-      await fetchAuctionData();
+      await fetchAuctionData(true);
     } catch (sellError) {
       setError(sellError.message ?? 'Unable to mark player as sold.');
     } finally {

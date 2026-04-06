@@ -92,10 +92,13 @@ export const useStore = create((set, get) => ({
       throw toFriendlyError(error);
     }
   },
-  loadLookups: async () => {
+  loadLookups: async (background = false) => {
     try {
       assertSupabaseConfigured();
-      set({ lookupsLoading: true });
+
+      if (!background) {
+        set({ lookupsLoading: true });
+      }
 
       const [teamsResponse, sportsResponse] = await Promise.all([
         supabase.from('teams').select('id, name, logo_url, auction_credits').order('name'),
@@ -103,12 +106,16 @@ export const useStore = create((set, get) => ({
       ]);
 
       if (teamsResponse.error) {
-        set({ lookupsLoading: false });
+        if (!background) {
+          set({ lookupsLoading: false });
+        }
         throw teamsResponse.error;
       }
 
       if (sportsResponse.error) {
-        set({ lookupsLoading: false });
+        if (!background) {
+          set({ lookupsLoading: false });
+        }
         throw sportsResponse.error;
       }
 
@@ -118,7 +125,9 @@ export const useStore = create((set, get) => ({
         lookupsLoading: false,
       });
     } catch (error) {
-      set({ lookupsLoading: false });
+      if (!background) {
+        set({ lookupsLoading: false });
+      }
       throw toFriendlyError(error);
     }
   },

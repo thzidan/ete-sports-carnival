@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import SportFilter from '../components/SportFilter';
+import { useRealtimeRefresh } from '../hooks/useRealtimeRefresh';
 import { useStore } from '../store/useStore';
 import { supabase } from '../supabaseClient';
 import { slugify } from '../utils/formatters';
@@ -15,27 +16,39 @@ export default function Scoreboard() {
 
   const activeSport = searchParams.get('sport') ?? 'all';
 
-  useEffect(() => {
-    const fetchStandings = async () => {
-      try {
+  const fetchStandings = async (background = false) => {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
-        const { data, error: standingsError } = await supabase
-          .from('standings')
-          .select(STANDINGS_SELECT)
-          .order('points', { ascending: false });
+      }
+      setError('');
+      const { data, error: standingsError } = await supabase
+        .from('standings')
+        .select(STANDINGS_SELECT)
+        .order('points', { ascending: false });
 
-        if (standingsError) throw standingsError;
-        setStandings(data ?? []);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load scoreboard.');
-      } finally {
+      if (standingsError) throw standingsError;
+      setStandings(data ?? []);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load scoreboard.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     void fetchStandings();
   }, []);
+
+  useRealtimeRefresh(
+    'scoreboard-live',
+    [{ table: 'standings' }, { table: 'teams' }, { table: 'sports' }],
+    () => {
+      void fetchStandings(true);
+    },
+  );
 
   const filteredRows = useMemo(() => {
     const rows =

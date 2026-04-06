@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import SportFilter from '../components/SportFilter';
+import { useRealtimeRefresh } from '../hooks/useRealtimeRefresh';
 import { useStore } from '../store/useStore';
 import { supabase } from '../supabaseClient';
 import { formatDate, slugify } from '../utils/formatters';
@@ -15,28 +16,40 @@ export default function MatchHistory() {
 
   const activeSport = searchParams.get('sport') ?? 'all';
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
+  const fetchHistory = async (background = false) => {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
-        const { data, error: historyError } = await supabase
-          .from('matches')
-          .select(MATCH_SELECT)
-          .eq('status', 'completed')
-          .order('scheduled_at', { ascending: false });
+      }
+      setError('');
+      const { data, error: historyError } = await supabase
+        .from('matches')
+        .select(MATCH_SELECT)
+        .eq('status', 'completed')
+        .order('scheduled_at', { ascending: false });
 
-        if (historyError) throw historyError;
-        setMatches(data ?? []);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load match history.');
-      } finally {
+      if (historyError) throw historyError;
+      setMatches(data ?? []);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load match history.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     void fetchHistory();
   }, []);
+
+  useRealtimeRefresh(
+    'match-history-live',
+    [{ table: 'matches' }, { table: 'teams' }, { table: 'sports' }],
+    () => {
+      void fetchHistory(true);
+    },
+  );
 
   const filteredMatches = useMemo(
     () =>

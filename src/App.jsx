@@ -1,6 +1,7 @@
-﻿import { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useRealtimeRefresh } from './hooks/useRealtimeRefresh';
 import AdminLayout from './layouts/AdminLayout';
 import PublicLayout from './layouts/PublicLayout';
 import TeamLayout from './layouts/TeamLayout';
@@ -23,6 +24,27 @@ import { useStore } from './store/useStore';
 export default function App() {
   const initializeAuth = useStore((state) => state.initializeAuth);
   const loadLookups = useStore((state) => state.loadLookups);
+  const fetchProfile = useStore((state) => state.fetchProfile);
+  const user = useStore((state) => state.user);
+
+  useRealtimeRefresh(
+    'app-lookups-live',
+    [{ table: 'teams' }, { table: 'sports' }],
+    () => {
+      void loadLookups(true);
+    },
+  );
+
+  useRealtimeRefresh(
+    'app-profile-live',
+    [{ table: 'admin_users' }, { table: 'teams' }],
+    () => {
+      if (user?.id) {
+        void fetchProfile(user.id);
+      }
+    },
+    Boolean(user?.id),
+  );
 
   useEffect(() => {
     let authSubscription;

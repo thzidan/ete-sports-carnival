@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Save, Trash2, Upload } from 'lucide-react';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { supabase } from '../../supabaseClient';
 import { useStore } from '../../store/useStore';
 
@@ -18,9 +19,11 @@ export default function ManageTeams() {
   const [drafts, setDrafts] = usePersistentState('admin-manage-teams-drafts', {});
   const [error, setError] = useState('');
 
-  const fetchTeams = async () => {
+  const fetchTeams = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       const { data, error: teamError } = await supabase.from('teams').select('*').order('created_at', { ascending: false });
       if (teamError) throw teamError;
       setTeams(data ?? []);
@@ -39,13 +42,24 @@ export default function ManageTeams() {
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load teams.');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void fetchTeams();
   }, []);
+
+  useRealtimeRefresh(
+    'admin-teams-live',
+    [{ table: 'teams' }],
+    () => {
+      void fetchTeams(true);
+      void loadLookups(true);
+    },
+  );
 
   const uploadLogoIfNeeded = async (file, teamName) => {
     if (!file) {
@@ -88,7 +102,7 @@ export default function ManageTeams() {
       if (createError) throw createError;
       clearForm();
       setLogoFile(null);
-      await Promise.all([fetchTeams(), loadLookups()]);
+      await Promise.all([fetchTeams(true), loadLookups(true)]);
     } catch (createError) {
       setError(createError.message ?? 'Unable to add team. Make sure the storage bucket exists.');
     } finally {
@@ -112,7 +126,7 @@ export default function ManageTeams() {
       if (updateError) throw updateError;
 
       clearTeamDraft(teamId);
-      await Promise.all([fetchTeams(), loadLookups()]);
+      await Promise.all([fetchTeams(true), loadLookups(true)]);
     } catch (saveError) {
       setError(saveError.message ?? 'Unable to update team. Make sure the storage bucket exists.');
     }
@@ -129,7 +143,7 @@ export default function ManageTeams() {
       if (deleteError) throw deleteError;
 
       clearTeamDraft(teamId);
-      await Promise.all([fetchTeams(), loadLookups()]);
+      await Promise.all([fetchTeams(true), loadLookups(true)]);
     } catch (deleteErr) {
       setError(deleteErr.message ?? 'Unable to delete team.');
     }

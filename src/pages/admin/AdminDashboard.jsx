@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Activity, CalendarDays, Trophy, Users } from 'lucide-react';
 import StatBadge from '../../components/StatBadge';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { supabase } from '../../supabaseClient';
 import { formatDateTime } from '../../utils/formatters';
 import { MATCH_SELECT } from '../../utils/selects';
@@ -16,42 +17,54 @@ export default function AdminDashboard() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchAdminStats = async () => {
-      try {
+  const fetchAdminStats = async (background = false) => {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
+      }
+      setError('');
 
-        const [totalMatches, liveMatches, teams, players, nextMatchResponse] = await Promise.all([
-          supabase.from('matches').select('*', { count: 'exact', head: true }),
-          supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'live'),
-          supabase.from('teams').select('*', { count: 'exact', head: true }),
-          supabase.from('players').select('*', { count: 'exact', head: true }),
-          supabase.from('matches').select(MATCH_SELECT).eq('status', 'upcoming').order('scheduled_at', { ascending: true }).limit(1).maybeSingle(),
-        ]);
+      const [totalMatches, liveMatches, teams, players, nextMatchResponse] = await Promise.all([
+        supabase.from('matches').select('*', { count: 'exact', head: true }),
+        supabase.from('matches').select('*', { count: 'exact', head: true }).eq('status', 'live'),
+        supabase.from('teams').select('*', { count: 'exact', head: true }),
+        supabase.from('players').select('*', { count: 'exact', head: true }),
+        supabase.from('matches').select(MATCH_SELECT).eq('status', 'upcoming').order('scheduled_at', { ascending: true }).limit(1).maybeSingle(),
+      ]);
 
-        if (totalMatches.error) throw totalMatches.error;
-        if (liveMatches.error) throw liveMatches.error;
-        if (teams.error) throw teams.error;
-        if (players.error) throw players.error;
-        if (nextMatchResponse.error) throw nextMatchResponse.error;
+      if (totalMatches.error) throw totalMatches.error;
+      if (liveMatches.error) throw liveMatches.error;
+      if (teams.error) throw teams.error;
+      if (players.error) throw players.error;
+      if (nextMatchResponse.error) throw nextMatchResponse.error;
 
-        setStats({
-          totalMatches: totalMatches.count ?? 0,
-          liveMatches: liveMatches.count ?? 0,
-          teamCount: teams.count ?? 0,
-          playerCount: players.count ?? 0,
-        });
-        setNextMatch(nextMatchResponse.data ?? null);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load admin dashboard.');
-      } finally {
+      setStats({
+        totalMatches: totalMatches.count ?? 0,
+        liveMatches: liveMatches.count ?? 0,
+        teamCount: teams.count ?? 0,
+        playerCount: players.count ?? 0,
+      });
+      setNextMatch(nextMatchResponse.data ?? null);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load admin dashboard.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     void fetchAdminStats();
   }, []);
+
+  useRealtimeRefresh(
+    'admin-dashboard-live',
+    [{ table: 'matches' }, { table: 'teams' }, { table: 'players' }],
+    () => {
+      void fetchAdminStats(true);
+    },
+  );
 
   return (
     <div className="space-y-6">

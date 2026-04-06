@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Coins, Shield, Users } from 'lucide-react';
 import PlayerAuctionCard from '../../components/PlayerAuctionCard';
 import StatBadge from '../../components/StatBadge';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../supabaseClient';
 import { PLAYER_SELECT } from '../../utils/selects';
@@ -11,59 +12,53 @@ export default function TeamDashboard() {
   const teamId = useStore((state) => state.teamId);
   const profile = useStore((state) => state.profile);
   const teams = useStore((state) => state.teams);
-  const loadLookups = useStore((state) => state.loadLookups);
   const [team, setTeam] = useState(null);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
+  const fetchTeamDashboard = async (background = false) => {
     if (!teamId) {
-      return undefined;
+      return;
     }
 
-    const fetchTeamDashboard = async () => {
-      try {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
+      }
+      setError('');
 
-        const [{ data: teamData, error: teamError }, { data: playerData, error: playerError }] = await Promise.all([
-          supabase.from('teams').select('id, name, logo_url, auction_credits').eq('id', teamId).maybeSingle(),
-          supabase.from('players').select(PLAYER_SELECT).eq('sold_to_team_id', teamId).order('created_at', { ascending: false }),
-        ]);
+      const [{ data: teamData, error: teamError }, { data: playerData, error: playerError }] = await Promise.all([
+        supabase.from('teams').select('id, name, logo_url, auction_credits').eq('id', teamId).maybeSingle(),
+        supabase.from('players').select(PLAYER_SELECT).eq('sold_to_team_id', teamId).order('created_at', { ascending: false }),
+      ]);
 
-        if (teamError) throw teamError;
-        if (playerError) throw playerError;
+      if (teamError) throw teamError;
+      if (playerError) throw playerError;
 
-        setTeam(teamData ?? null);
-        setPlayers(playerData ?? []);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load your team dashboard.');
-      } finally {
+      setTeam(teamData ?? null);
+      setPlayers(playerData ?? []);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load your team dashboard.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
-    const refreshDashboard = async () => {
-      await Promise.all([fetchTeamDashboard(), loadLookups()]);
-    };
+  useEffect(() => {
+    void fetchTeamDashboard();
+  }, [teamId]);
 
-    void refreshDashboard();
-
-    const channel = supabase
-      .channel(`team-dashboard-${teamId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'teams' }, () => {
-        void refreshDashboard();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'players' }, () => {
-        void fetchTeamDashboard();
-      })
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
-  }, [teamId, loadLookups]);
+  useRealtimeRefresh(
+    `team-dashboard-${teamId}`,
+    [{ table: 'teams' }, { table: 'players' }],
+    () => {
+      void fetchTeamDashboard(true);
+    },
+    Boolean(teamId),
+  );
 
   const totalSpent = useMemo(
     () => players.reduce((sum, player) => sum + Number(player.sold_price ?? 0), 0),

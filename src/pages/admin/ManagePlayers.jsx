@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Save, Trash2, Upload } from 'lucide-react';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { supabase } from '../../supabaseClient';
 import { positionOptions } from '../../utils/formatters';
 import { PLAYER_SELECT } from '../../utils/selects';
@@ -23,9 +24,11 @@ export default function ManagePlayers() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchPlayers = async () => {
+  const fetchPlayers = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       const { data, error: playerError } = await supabase
         .from('players')
         .select(PLAYER_SELECT)
@@ -47,13 +50,23 @@ export default function ManagePlayers() {
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load players.');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void fetchPlayers();
   }, []);
+
+  useRealtimeRefresh(
+    'admin-players-live',
+    [{ table: 'players' }, { table: 'teams' }],
+    () => {
+      void fetchPlayers(true);
+    },
+  );
 
   const uploadPhotoIfNeeded = async () => {
     if (!photoFile) {
@@ -87,7 +100,7 @@ export default function ManagePlayers() {
 
       clearForm();
       setPhotoFile(null);
-      await fetchPlayers();
+      await fetchPlayers(true);
     } catch (createErr) {
       setError(createErr.message ?? 'Unable to create player. Make sure the storage bucket exists.');
     } finally {
@@ -114,7 +127,7 @@ export default function ManagePlayers() {
         return nextDrafts;
       });
 
-      await fetchPlayers();
+      await fetchPlayers(true);
     } catch (saveError) {
       setError(saveError.message ?? 'Unable to update player.');
     }
@@ -136,7 +149,7 @@ export default function ManagePlayers() {
         return nextDrafts;
       });
 
-      await fetchPlayers();
+      await fetchPlayers(true);
     } catch (deleteErr) {
       setError(deleteErr.message ?? 'Unable to delete player.');
     }

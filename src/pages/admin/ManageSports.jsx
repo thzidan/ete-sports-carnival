@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { supabase } from '../../supabaseClient';
 import { useStore } from '../../store/useStore';
 
@@ -14,22 +15,35 @@ export default function ManageSports() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const fetchSports = async () => {
+  const fetchSports = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       const { data, error: sportsError } = await supabase.from('sports').select('*').order('created_at', { ascending: false });
       if (sportsError) throw sportsError;
       setSports(data ?? []);
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load sports.');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     void fetchSports();
   }, []);
+
+  useRealtimeRefresh(
+    'admin-sports-live',
+    [{ table: 'sports' }],
+    () => {
+      void fetchSports(true);
+      void loadLookups(true);
+    },
+  );
 
   const handleCreate = async (event) => {
     event.preventDefault();
@@ -42,7 +56,7 @@ export default function ManageSports() {
       });
       if (createError) throw createError;
       clearForm();
-      await Promise.all([fetchSports(), loadLookups()]);
+      await Promise.all([fetchSports(true), loadLookups(true)]);
     } catch (createError) {
       setError(createError.message ?? 'Unable to create sport.');
     } finally {
@@ -59,7 +73,7 @@ export default function ManageSports() {
       setError('');
       const { error: deleteError } = await supabase.from('sports').delete().eq('id', sportId);
       if (deleteError) throw deleteError;
-      await Promise.all([fetchSports(), loadLookups()]);
+      await Promise.all([fetchSports(true), loadLookups(true)]);
     } catch (deleteErr) {
       setError(deleteErr.message ?? 'Unable to delete sport.');
     }

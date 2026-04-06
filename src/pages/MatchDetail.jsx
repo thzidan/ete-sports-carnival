@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, CalendarClock, MapPin, StickyNote } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useRealtimeRefresh } from '../hooks/useRealtimeRefresh';
 import { supabase } from '../supabaseClient';
 import { formatDateTime } from '../utils/formatters';
 import { MATCH_SELECT } from '../utils/selects';
@@ -12,30 +13,45 @@ export default function MatchDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const fetchMatch = async () => {
-      try {
+  const fetchMatch = async (background = false) => {
+    try {
+      if (!background) {
         setLoading(true);
-        setError('');
-        const { data, error: matchError } = await supabase
-          .from('matches')
-          .select(MATCH_SELECT)
-          .eq('id', id)
-          .maybeSingle();
+      }
+      setError('');
+      const { data, error: matchError } = await supabase
+        .from('matches')
+        .select(MATCH_SELECT)
+        .eq('id', id)
+        .maybeSingle();
 
-        if (matchError) throw matchError;
-        setMatch(data ?? null);
-      } catch (fetchError) {
-        setError(fetchError.message ?? 'Unable to load match details.');
-      } finally {
+      if (matchError) throw matchError;
+      setMatch(data ?? null);
+    } catch (fetchError) {
+      setError(fetchError.message ?? 'Unable to load match details.');
+    } finally {
+      if (!background) {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     if (id) {
       void fetchMatch();
     }
   }, [id]);
+
+  useRealtimeRefresh(
+    `match-detail-${id}`,
+    [{ table: 'matches' }, { table: 'teams' }, { table: 'sports' }],
+    () => {
+      if (id) {
+        void fetchMatch(true);
+      }
+    },
+    Boolean(id),
+  );
 
   if (loading) {
     return <div className="card h-72 animate-pulse bg-[#151515]" />;

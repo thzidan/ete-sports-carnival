@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { PencilLine, RefreshCcw, Trash2 } from 'lucide-react';
 import { usePersistentState } from '../../hooks/usePersistentState';
+import { useRealtimeRefresh } from '../../hooks/useRealtimeRefresh';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../supabaseClient';
 import { formatDateTime } from '../../utils/formatters';
@@ -45,9 +46,11 @@ export default function ManageMatches() {
     [form.team1_id, form.team2_id, teams],
   );
 
-  const fetchMatches = async () => {
+  const fetchMatches = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) {
+        setLoading(true);
+      }
       const { data, error: matchError } = await supabase
         .from('matches')
         .select(MATCH_SELECT)
@@ -58,7 +61,9 @@ export default function ManageMatches() {
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load matches.');
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
@@ -81,6 +86,14 @@ export default function ManageMatches() {
   useEffect(() => {
     void fetchMatches();
   }, []);
+
+  useRealtimeRefresh(
+    'admin-matches-live',
+    [{ table: 'matches' }, { table: 'teams' }, { table: 'sports' }, { table: 'standings' }],
+    () => {
+      void fetchMatches(true);
+    },
+  );
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -122,7 +135,7 @@ export default function ManageMatches() {
       await syncStandings();
       clearForm();
       clearEditingId();
-      await fetchMatches();
+      await fetchMatches(true);
     } catch (saveErr) {
       setError(saveErr.message ?? 'Unable to save match.');
     } finally {
@@ -165,7 +178,7 @@ export default function ManageMatches() {
         handleReset();
       }
       await syncStandings();
-      await fetchMatches();
+      await fetchMatches(true);
     } catch (deleteErr) {
       setError(deleteErr.message ?? 'Unable to delete match.');
     }

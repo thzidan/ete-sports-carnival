@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    @apply border-divider;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-canvas font-sans text-copy antialiased;
+    margin: 0;
+  }
+
+  a {
+    @apply transition-colors;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    @apply font-sans;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8;
+  }
+
+  .card {
+    @apply rounded-2xl border border-divider bg-surface p-4 shadow-sm transition duration-200 hover:border-[#3a3a3a];
+  }
+
+  .card-glow {
+    @apply shadow-glow;
+  }
+
+  .section-heading {
+    @apply text-2xl font-bold tracking-tight text-copy sm:text-3xl;
+  }
+
+  .section-copy {
+    @apply text-sm text-muted;
+  }
+
+  .primary-button {
+    @apply inline-flex items-center justify-center rounded-xl border border-brand-blue bg-brand-blue px-4 py-2 text-sm font-semibold text-copy transition hover:border-[#2363c4] hover:bg-[#2363c4] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .secondary-button {
+    @apply inline-flex items-center justify-center rounded-xl border border-divider bg-transparent px-4 py-2 text-sm font-medium text-copy transition hover:border-brand-blue;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-divider bg-[#141414] px-3 py-2 text-sm text-copy outline-none transition placeholder:text-muted focus:border-brand-blue;
+  }
+
+  .select-field {
+    @apply input-field appearance-none;
+  }
+
+  .textarea-field {
+    @apply input-field min-h-[112px] resize-y;
+  }
+
+  .status-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-divider px-3 py-1 text-xs font-medium uppercase tracking-[0.16em];
+  }
+
+  .table-shell {
+    @apply overflow-hidden rounded-2xl border border-divider bg-surface;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+
+  .data-table {
+    @apply min-w-full divide-y divide-divider;
+  }
+
+  .data-table thead tr {
+    @apply bg-[#161616];
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-[#9dbbe0];
+  }
+
+  .data-table td {
+    @apply px-4 py-3 text-sm text-copy;
+  }
+
+  .data-table tbody tr:nth-child(odd) {
+    @apply bg-surface;
+  }
+
+  .data-table tbody tr:nth-child(even) {
+    @apply bg-[#161616];
+  }
+
+  .data-table tbody tr {
+    @apply transition hover:bg-[#1d1d1d];
+  }
+
+  .panel-title {
+    @apply text-lg font-semibold text-copy;
+  }
+
+  .panel-subtitle {
+    @apply text-sm text-muted;
+  }
+}
+
+@layer utilities {
+  .accent-text {
+    @apply text-copy;
+  }
+
+  .accent-border {
+    @apply border border-brand-blue/35;
+  }
+}

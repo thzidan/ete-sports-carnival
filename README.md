@@ -37,7 +37,7 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 1. Create a new Supabase project.
 2. In Supabase Auth, enable Email authentication.
 3. Open the SQL editor and run [supabase/schema.sql](supabase/schema.sql).
-4. Confirm the `player-photos` Storage bucket exists and is public.
+4. Confirm the `player-photos` and `team-logos` Storage buckets exist and are public.
 5. Create users in Supabase Auth.
 6. Insert matching rows into `public.admin_users`:
 
@@ -75,5 +75,6 @@ npm run build
 
 - Match standings are recalculated in the admin match manager whenever a match is created, updated, or deleted.
 - Player photos upload to Supabase Storage bucket `player-photos`.
+- Team logos upload to Supabase Storage bucket `team-logos`.
 - Team auction credits are deducted from the `teams.auction_credits` column when a player is sold from the auction control page.
 - Legacy static HTML files now redirect into the React routes so old bookmarks and browser history do not reopen the previous template.

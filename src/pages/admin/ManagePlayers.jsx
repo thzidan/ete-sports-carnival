@@ -1,21 +1,23 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Save, Trash2, Upload } from 'lucide-react';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { supabase } from '../../supabaseClient';
 import { positionOptions } from '../../utils/formatters';
 import { PLAYER_SELECT } from '../../utils/selects';
 
 const BUCKET_NAME = 'player-photos';
+const defaultForm = {
+  name: '',
+  series: '',
+  position: positionOptions[0],
+  base_price: 0,
+  status: 'available',
+};
 
 export default function ManagePlayers() {
   const [players, setPlayers] = useState([]);
-  const [drafts, setDrafts] = useState({});
-  const [form, setForm] = useState({
-    name: '',
-    series: '',
-    position: positionOptions[0],
-    base_price: 0,
-    status: 'available',
-  });
+  const [drafts, setDrafts] = usePersistentState('admin-manage-players-drafts', {});
+  const [form, setForm, clearForm] = usePersistentState('admin-manage-players-form', defaultForm);
   const [photoFile, setPhotoFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,13 +33,13 @@ export default function ManagePlayers() {
 
       if (playerError) throw playerError;
       setPlayers(data ?? []);
-      setDrafts(
+      setDrafts((currentDrafts) =>
         Object.fromEntries(
           (data ?? []).map((player) => [
             player.id,
             {
-              base_price: player.base_price,
-              status: player.status,
+              base_price: currentDrafts[player.id]?.base_price ?? player.base_price,
+              status: currentDrafts[player.id]?.status ?? player.status,
             },
           ]),
         ),
@@ -83,13 +85,7 @@ export default function ManagePlayers() {
       });
       if (createError) throw createError;
 
-      setForm({
-        name: '',
-        series: '',
-        position: positionOptions[0],
-        base_price: 0,
-        status: 'available',
-      });
+      clearForm();
       setPhotoFile(null);
       await fetchPlayers();
     } catch (createErr) {
@@ -111,6 +107,13 @@ export default function ManagePlayers() {
         })
         .eq('id', playerId);
       if (updateError) throw updateError;
+
+      setDrafts((currentDrafts) => {
+        const nextDrafts = { ...currentDrafts };
+        delete nextDrafts[playerId];
+        return nextDrafts;
+      });
+
       await fetchPlayers();
     } catch (saveError) {
       setError(saveError.message ?? 'Unable to update player.');
@@ -126,6 +129,13 @@ export default function ManagePlayers() {
       setError('');
       const { error: deleteError } = await supabase.from('players').delete().eq('id', playerId);
       if (deleteError) throw deleteError;
+
+      setDrafts((currentDrafts) => {
+        const nextDrafts = { ...currentDrafts };
+        delete nextDrafts[playerId];
+        return nextDrafts;
+      });
+
       await fetchPlayers();
     } catch (deleteErr) {
       setError(deleteErr.message ?? 'Unable to delete player.');
@@ -187,11 +197,14 @@ export default function ManagePlayers() {
           </select>
         </div>
 
-        <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-divider bg-[#141414] px-4 py-3 text-sm text-copy">
-          <Upload size={16} className="text-brand-teal" />
-          <span>{photoFile ? photoFile.name : 'Upload player photo'}</span>
-          <input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
-        </label>
+        <div className="space-y-2">
+          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-divider bg-[#141414] px-4 py-3 text-sm text-copy">
+            <Upload size={16} className="text-brand-teal" />
+            <span>{photoFile ? photoFile.name : 'Upload player photo'}</span>
+            <input type="file" accept="image/*" className="hidden" onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)} />
+          </label>
+          <p className="text-xs text-muted">Text inputs now stay saved locally, but the photo file needs to be selected again after a full refresh.</p>
+        </div>
 
         <button type="submit" className="primary-button" disabled={saving}>
           {saving ? 'Saving...' : 'Add Player'}

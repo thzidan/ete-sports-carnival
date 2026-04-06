@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PencilLine, RefreshCcw, Trash2 } from 'lucide-react';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { useStore } from '../../store/useStore';
 import { supabase } from '../../supabaseClient';
 import { formatDateTime } from '../../utils/formatters';
@@ -33,8 +34,8 @@ export default function ManageMatches() {
   const sports = useStore((state) => state.sports);
   const teams = useStore((state) => state.teams);
   const [matches, setMatches] = useState([]);
-  const [form, setForm] = useState(defaultForm);
-  const [editingId, setEditingId] = useState(null);
+  const [form, setForm, clearForm] = usePersistentState('admin-manage-matches-form', defaultForm);
+  const [editingId, setEditingId, clearEditingId] = usePersistentState('admin-manage-matches-editing-id', null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -119,8 +120,8 @@ export default function ManageMatches() {
       if (saveError) throw saveError;
 
       await syncStandings();
-      setForm(defaultForm);
-      setEditingId(null);
+      clearForm();
+      clearEditingId();
       await fetchMatches();
     } catch (saveErr) {
       setError(saveErr.message ?? 'Unable to save match.');
@@ -145,6 +146,12 @@ export default function ManageMatches() {
     });
   };
 
+  const handleReset = () => {
+    setError('');
+    clearEditingId();
+    clearForm();
+  };
+
   const handleDelete = async (matchId) => {
     if (!window.confirm('Delete this match? Standings will be recalculated.')) {
       return;
@@ -154,6 +161,9 @@ export default function ManageMatches() {
       setError('');
       const { error: deleteError } = await supabase.from('matches').delete().eq('id', matchId);
       if (deleteError) throw deleteError;
+      if (editingId === matchId) {
+        handleReset();
+      }
       await syncStandings();
       await fetchMatches();
     } catch (deleteErr) {
@@ -288,14 +298,7 @@ export default function ManageMatches() {
           <button type="submit" className="primary-button" disabled={saving}>
             {saving ? 'Saving...' : editingId ? 'Update Match' : 'Add Match'}
           </button>
-          <button
-            type="button"
-            className="secondary-button gap-2"
-            onClick={() => {
-              setEditingId(null);
-              setForm(defaultForm);
-            }}
-          >
+          <button type="button" className="secondary-button gap-2" onClick={handleReset}>
             <RefreshCcw size={16} />
             Reset
           </button>

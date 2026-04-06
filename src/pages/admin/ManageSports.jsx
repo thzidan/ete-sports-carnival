@@ -1,12 +1,15 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { supabase } from '../../supabaseClient';
 import { useStore } from '../../store/useStore';
+
+const defaultForm = { name: '', icon: '' };
 
 export default function ManageSports() {
   const loadLookups = useStore((state) => state.loadLookups);
   const [sports, setSports] = useState([]);
-  const [form, setForm] = useState({ name: '', icon: '' });
+  const [form, setForm, clearForm] = usePersistentState('admin-manage-sports-form', defaultForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -38,7 +41,7 @@ export default function ManageSports() {
         icon: form.icon || null,
       });
       if (createError) throw createError;
-      setForm({ name: '', icon: '' });
+      clearForm();
       await Promise.all([fetchSports(), loadLookups()]);
     } catch (createError) {
       setError(createError.message ?? 'Unable to create sport.');

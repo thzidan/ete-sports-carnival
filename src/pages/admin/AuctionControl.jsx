@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Coins, RadioTower } from 'lucide-react';
 import PlayerAuctionCard from '../../components/PlayerAuctionCard';
+import { usePersistentState } from '../../hooks/usePersistentState';
 import { supabase } from '../../supabaseClient';
 import { formatCurrency } from '../../utils/formatters';
 import { PLAYER_SELECT } from '../../utils/selects';
@@ -10,9 +11,9 @@ export default function AuctionControl() {
   const [currentPlayer, setCurrentPlayer] = useState(null);
   const [availablePlayers, setAvailablePlayers] = useState([]);
   const [teams, setTeams] = useState([]);
-  const [selectedPlayerId, setSelectedPlayerId] = useState('');
-  const [soldPrice, setSoldPrice] = useState('');
-  const [selectedTeamId, setSelectedTeamId] = useState('');
+  const [selectedPlayerId, setSelectedPlayerId] = usePersistentState('admin-auction-selected-player', '');
+  const [soldPrice, setSoldPrice, clearSoldPrice] = usePersistentState('admin-auction-sold-price', '');
+  const [selectedTeamId, setSelectedTeamId, clearSelectedTeamId] = usePersistentState('admin-auction-selected-team', '');
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,13 +50,21 @@ export default function AuctionControl() {
 
       const current = (playersData ?? []).find((player) => player.id === state.current_player_id) ?? null;
       const available = (playersData ?? []).filter((player) => player.status === 'available');
+      const availablePlayerIds = new Set(available.map((player) => player.id));
+      const teamIds = new Set((teamsData ?? []).map((team) => team.id));
 
       setAuctionState(state);
       setCurrentPlayer(current);
       setAvailablePlayers(available);
       setTeams(teamsData ?? []);
-      setSelectedPlayerId(state.current_player_id ?? '');
-      setSoldPrice(current?.base_price ? String(current.base_price) : '');
+      setSelectedPlayerId((currentValue) => {
+        if (currentValue && (currentValue === state.current_player_id || availablePlayerIds.has(currentValue))) {
+          return currentValue;
+        }
+        return state.current_player_id ?? '';
+      });
+      setSoldPrice((currentValue) => currentValue || (current?.base_price ? String(current.base_price) : ''));
+      setSelectedTeamId((currentValue) => (currentValue && teamIds.has(currentValue) ? currentValue : ''));
     } catch (fetchError) {
       setError(fetchError.message ?? 'Unable to load auction control data.');
     } finally {
@@ -93,6 +102,8 @@ export default function AuctionControl() {
         .update({ current_player_id: selectedPlayerId || null, updated_at: new Date().toISOString() })
         .eq('id', auctionState.id);
       if (updateError) throw updateError;
+      clearSelectedTeamId();
+      clearSoldPrice();
       await fetchAuctionData();
     } catch (assignError) {
       setError(assignError.message ?? 'Unable to set the current player.');
@@ -151,7 +162,8 @@ export default function AuctionControl() {
       if (stateError) throw stateError;
 
       setModalOpen(false);
-      setSelectedTeamId('');
+      clearSelectedTeamId();
+      clearSoldPrice();
       await fetchAuctionData();
     } catch (sellError) {
       setError(sellError.message ?? 'Unable to mark player as sold.');
@@ -297,7 +309,13 @@ export default function AuctionControl() {
               <button type="button" className="primary-button" onClick={handleConfirmSold} disabled={saving}>
                 {saving ? 'Saving...' : 'Confirm Sale'}
               </button>
-              <button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setModalOpen(false);
+                }}
+              >
                 Cancel
               </button>
             </div>

@@ -196,6 +196,10 @@ insert into storage.buckets (id, name, public)
 values ('player-photos', 'player-photos', true)
 on conflict (id) do nothing;
 
+insert into storage.buckets (id, name, public)
+values ('team-logos', 'team-logos', true)
+on conflict (id) do nothing;
+
 drop policy if exists "Public read player photos" on storage.objects;
 create policy "Public read player photos"
 on storage.objects for select
@@ -220,3 +224,28 @@ create policy "Admin delete player photos"
 on storage.objects for delete
 to authenticated
 using (bucket_id = 'player-photos' and public.is_admin());
+
+drop policy if exists "Public read team logos" on storage.objects;
+create policy "Public read team logos"
+on storage.objects for select
+to public
+using (bucket_id = 'team-logos');
+
+drop policy if exists "Admin upload team logos" on storage.objects;
+create policy "Admin upload team logos"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'team-logos' and public.is_admin());
+
+drop policy if exists "Admin update team logos" on storage.objects;
+create policy "Admin update team logos"
+on storage.objects for update
+to authenticated
+using (bucket_id = 'team-logos' and public.is_admin())
+with check (bucket_id = 'team-logos' and public.is_admin());
+
+drop policy if exists "Admin delete team logos" on storage.objects;
+create policy "Admin delete team logos"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'team-logos' and public.is_admin());

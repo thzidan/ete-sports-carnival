@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import LeaderboardCard from '../components/LeaderboardCard';
 import MatchCard from '../components/MatchCard';
 import logo from '../assets/ete-sports-carnival-logo.svg';
+import sponsorLogo from '../assets/payaura-placeholder.svg';
 import { useStore } from '../store/useStore';
 import { supabase } from '../supabaseClient';
 import { MATCH_SELECT, STANDINGS_SELECT } from '../utils/selects';
@@ -90,6 +91,27 @@ export default function Dashboard() {
               <p className="mt-4 max-w-3xl text-base leading-7 text-muted sm:text-lg">
                 Let the spirit of sports flow through us, uniting the entire ETE family in passion and pride. Together we celebrate strength, teamwork, and unity, organized by ETE '21.
               </p>
+
+              <div className="mt-6 rounded-2xl border border-divider bg-[#131313] p-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={sponsorLogo} alt="PayAura placeholder logo" className="h-14 w-auto rounded-xl border border-divider bg-[#0f0f0f]" />
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.28em] text-muted">Title Sponsor</p>
+                      <p className="mt-1 text-lg font-semibold text-copy">This competition title is sponsored by PayAura</p>
+                    </div>
+                  </div>
+                  <a
+                    href="https://www.facebook.com/PayAura"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="secondary-button w-fit border-brand-blue/35"
+                  >
+                    PayAura Facebook
+                  </a>
+                </div>
+              </div>
+
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link to="/scoreboard" className="primary-button gap-2">
                   See Full Scoreboard

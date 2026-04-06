@@ -1,5 +1,6 @@
 import { CalendarDays, LayoutDashboard, LogOut, Trophy, Users, Volleyball } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import Footer from '../components/Footer';
 import { useStore } from '../store/useStore';
 
 const navItems = [
@@ -22,8 +23,8 @@ export default function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
-      <div className="mx-auto grid min-h-screen max-w-7xl gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] lg:px-8">
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <div className="mx-auto grid min-h-screen w-full max-w-7xl flex-1 gap-6 px-4 py-6 lg:grid-cols-[280px_1fr] lg:px-8">
         <aside className="card h-fit lg:sticky lg:top-6">
           <div className="border-b border-divider pb-4">
             <p className="text-sm uppercase tracking-[0.28em] text-muted">Admin Panel</p>
@@ -65,6 +66,7 @@ export default function AdminLayout() {
           <Outlet />
         </section>
       </div>
+      <Footer />
     </div>
   );
 }

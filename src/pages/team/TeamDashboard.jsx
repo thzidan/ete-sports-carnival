@@ -194,7 +194,7 @@ export default function TeamDashboard() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {players.length ? (
             players.slice(0, 3).map((player) => <PlayerAuctionCard key={player.id} player={player} compact />)
           ) : (

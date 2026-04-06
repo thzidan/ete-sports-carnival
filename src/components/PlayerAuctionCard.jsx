@@ -30,34 +30,34 @@ function formatSeriesLabel(series) {
 export default function PlayerAuctionCard({ player, compact = false }) {
   if (compact) {
     return (
-      <div className="card p-2.5">
-        <div className="grid grid-cols-[64px_1fr] gap-3">
-          <div className="h-20 w-16 overflow-hidden rounded-xl border border-divider bg-[#141414]">
+      <div className="card p-3.5">
+        <div className="grid grid-cols-[72px_minmax(0,1fr)] gap-3.5">
+          <div className="h-24 w-[72px] overflow-hidden rounded-2xl border border-divider bg-[#141414]">
             <PlayerPhoto player={player} compact />
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold leading-none text-brand-teal">{formatSeriesLabel(player.series)}</p>
-                <h3 className="mt-1 truncate text-[1.75rem] font-bold leading-none text-copy">{player.name}</h3>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-none text-brand-teal">{formatSeriesLabel(player.series)}</p>
+                <h3 className="mt-1 text-[2rem] font-bold leading-[0.92] text-copy break-words">{player.name}</h3>
               </div>
               <div className={`status-pill shrink-0 px-2.5 py-1 text-[10px] ${getPositionTone(player.position)}`}>
                 {player.position}
               </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2">
-              <div className="min-w-[120px] rounded-xl border border-brand-teal/30 bg-brand-teal/10 px-3 py-2">
+            <div className="mt-3 flex flex-wrap items-end gap-2.5">
+              <div className="min-w-[118px] rounded-2xl border border-brand-teal/30 bg-brand-teal/10 px-3 py-2.5">
                 <p className="text-[10px] uppercase tracking-[0.22em] text-brand-teal">Sold</p>
                 <p className="mt-1 text-xl font-bold leading-none text-copy">{formatCurrency(player.sold_price)}</p>
               </div>
 
               {player.team?.name ? (
-                <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-brand-teal px-3 py-2 text-sm font-semibold leading-none text-black">
+                <div className="inline-flex max-w-full items-center gap-2 rounded-full bg-brand-teal px-3 py-2 text-sm font-semibold text-black">
                   <Coins size={14} className="shrink-0" />
-                  <span className="truncate">{player.team.name}</span>
-                </span>
+                  <span className="max-w-[220px] break-words leading-tight">{player.team.name}</span>
+                </div>
               ) : null}
             </div>
           </div>

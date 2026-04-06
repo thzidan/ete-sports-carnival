@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useRealtimeRefresh } from './hooks/useRealtimeRefresh';
 import AdminLayout from './layouts/AdminLayout';
@@ -66,35 +67,38 @@ export default function App() {
   }, [initializeAuth, loadLookups]);
 
   return (
-    <Routes>
-      <Route element={<PublicLayout />}>
-        <Route index element={<Dashboard />} />
-        <Route path="/scoreboard" element={<Scoreboard />} />
-        <Route path="/match-history" element={<MatchHistory />} />
-        <Route path="/match/:id" element={<MatchDetail />} />
-        <Route path="/auction" element={<AuctionPublic />} />
-        <Route path="/login" element={<Login />} />
-      </Route>
-
-      <Route element={<ProtectedRoute allowedRoles={['team']} />}>
-        <Route path="/team" element={<TeamLayout />}>
-          <Route index element={<TeamDashboard />} />
-          <Route path="squad" element={<TeamSquad />} />
+    <>
+      <Routes>
+        <Route element={<PublicLayout />}>
+          <Route index element={<Dashboard />} />
+          <Route path="/scoreboard" element={<Scoreboard />} />
+          <Route path="/match-history" element={<MatchHistory />} />
+          <Route path="/match/:id" element={<MatchDetail />} />
+          <Route path="/auction" element={<AuctionPublic />} />
+          <Route path="/login" element={<Login />} />
         </Route>
-      </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="sports" element={<ManageSports />} />
-          <Route path="teams" element={<ManageTeams />} />
-          <Route path="matches" element={<ManageMatches />} />
-          <Route path="players" element={<ManagePlayers />} />
-          <Route path="auction" element={<AuctionControl />} />
+        <Route element={<ProtectedRoute allowedRoles={['team']} />}>
+          <Route path="/team" element={<TeamLayout />}>
+            <Route index element={<TeamDashboard />} />
+            <Route path="squad" element={<TeamSquad />} />
+          </Route>
         </Route>
-      </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="sports" element={<ManageSports />} />
+            <Route path="teams" element={<ManageTeams />} />
+            <Route path="matches" element={<ManageMatches />} />
+            <Route path="players" element={<ManagePlayers />} />
+            <Route path="auction" element={<AuctionControl />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <Analytics />
+    </>
   );
 }
